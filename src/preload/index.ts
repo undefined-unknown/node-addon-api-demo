@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
@@ -11,10 +11,6 @@ if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
-    contextBridge.exposeInMainWorld('addon', {
-      getHello: () => ipcRenderer.invoke('addon:getHello'),
-      add: (a: number, b: number) => ipcRenderer.invoke('addon:add', a, b)
-    })
   } catch (error) {
     console.error(error)
   }

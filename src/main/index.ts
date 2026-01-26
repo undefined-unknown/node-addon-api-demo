@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -44,6 +44,15 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  // 注册全局快捷键：Cmd+Shift+D (macOS) 或 Ctrl+Shift+D (Windows/Linux) 打开开发者工具
+  const devToolsShortcut = process.platform === 'darwin' ? 'Command+Shift+D' : 'Ctrl+Shift+D'
+  globalShortcut.register(devToolsShortcut, () => {
+    const mainWindow = BrowserWindow.getAllWindows().find((window) => !window.isDestroyed())
+    if (mainWindow) {
+      mainWindow.webContents.toggleDevTools()
+    }
+  })
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
