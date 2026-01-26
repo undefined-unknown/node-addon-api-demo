@@ -1,7 +1,7 @@
 appId: com.electron.app
 productName: node-addon-api-demo
 directories:
-  buildResources: build # 图标所在目录
+  buildResources: resources # 图标所在目录
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -48,8 +48,8 @@ mac:
     - zip # 必须包含 zip，用于自动更新（dmg 无法增量更新）
   hardenedRuntime: true
   gatekeeperAssess: false
-  entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
   extendInfo:
     NSCameraUsageDescription: Application requests access to the device's camera.
     NSMicrophoneUsageDescription: Application requests access to the device's microphone.
