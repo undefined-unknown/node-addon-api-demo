@@ -1,7 +1,7 @@
 appId: com.electron.app
 productName: node-addon-api-demo
 directories:
-  buildResources: build
+  buildResources: build # 图标所在目录
 files:
   - '!**/.vscode/*'
   - '!src/*'
@@ -11,23 +11,66 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+extraResources:
+  - from: resources
+    to: resources
+    filter:
+      - '**/*'
+# 通用图标
+icon: icons/icon.png # 256x256 PNG
+fileAssociations:
+  - ext: clawlab
+    name: ClawLab Studio Project File
+    description: ClawLab Studio 工程文件
+    icon: icons/icon.icns
+    role: Editor
+    isPackage: false
+    mimeType: application/x-clawlab
+# Windows 专用
 win:
   executableName: node-addon-api-demo
+  icon: icons/icon.ico # 必须是 .ico
+  artifactName: ${productName}-${os}-${version}-${arch}.${ext}
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  oneClick: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  installerIcon: icons/icon.ico
+  uninstallerIcon: icons/icon.ico
+  installerHeaderIcon: icons/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
   shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
+  artifactName: ${productName}-${os}-${version}-${arch}.${ext}
 mac:
+  target:
+    - dmg
+    - zip # 必须包含 zip，用于自动更新（dmg 无法增量更新）
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+    NSCameraUsageDescription: Application requests access to the device's camera.
+    NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+    NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+    NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+    CFBundleDocumentTypes:
+      - CFBundleTypeName: ClawLab Studio Project File
+        CFBundleTypeRole: Editor
+        CFBundleTypeIconFile: icon.icns
+        CFBundleTypeExtensions: [clawlab]
+        CFBundleTypeDescription: ClawLab 工程文件
+        LSHandlerRank: Owner
+  # 启用自动公证
+  notarize: true
+  icon: icons/icon.icns # 必须是 .icns
+  artifactName: ${productName}-${os}-${version}-${arch}.${ext}
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${os}-${version}-${arch}.${ext}
+  sign: true # 必须签名 DMG，否则 Gatekeeper 会拒绝
+  icon: icons/icon.icns # 必须是 .icns
+  # background: icons/background.png # 必须是 .png
 linux:
   target:
     - AppImage
@@ -38,8 +81,14 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
+# 公证
+afterSign: scripts/notarize.js
+# 在所有构建产物完成后，公证 DMG 文件
+afterAllArtifactBuild: scripts/notarize-dmg.js
+# 上传到 CDN（自动更新配置）
 publish:
   provider: generic
-  url: https://example.com/auto-updates
+  url: https://download.clawlab.cn/Studio/
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
+

@@ -125,7 +125,7 @@ INCS_Release := \
 	-I/Users/gd/clawlab/node-addon-api-demo/node_modules/node-addon-api
 
 OBJS := \
-	$(obj).target/$(TARGET)/resources/hello.o
+	$(obj).target/$(TARGET)/cpp/hello.o
 
 # Add to the list of files we specially track dependencies for.
 all_deps += $(OBJS)

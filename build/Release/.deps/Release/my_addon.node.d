@@ -1,1 +1,1 @@
-cmd_Release/my_addon.node := c++ -bundle -undefined dynamic_lookup -Wl,-search_paths_first -mmacosx-version-min=10.7 -arch arm64 -L./Release -stdlib=libc++  -o Release/my_addon.node Release/obj.target/my_addon/resources/hello.o Release/nothing.a 
+cmd_Release/my_addon.node := c++ -bundle -undefined dynamic_lookup -Wl,-search_paths_first -mmacosx-version-min=10.7 -arch arm64 -L./Release -stdlib=libc++  -o Release/my_addon.node Release/obj.target/my_addon/cpp/hello.o Release/nothing.a 
