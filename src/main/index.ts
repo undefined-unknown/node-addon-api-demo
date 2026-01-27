@@ -1,10 +1,11 @@
 import { app, shell, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { join } from 'path'
+import fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import bindings from 'bindings'
 
-const addon = bindings('my_addon')
+const addon = bindings('yima_addon')
 
 function createWindow(): void {
   // Create the browser window.
@@ -61,7 +62,52 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  ipcMain.handle('addon:getHello', () => addon.getHello())
+  ipcMain.handle('addon:getHello', () => {
+    // 在开发环境和生产环境中正确获取资源路径
+    let configPath: string
+    let inputPath: string
+    let outputPath: string
+
+    if (is.dev) {
+      // 开发环境：使用项目根目录下的 resources
+      const rootDir = __dirname
+      configPath = join(rootDir, '../../resources/config')
+      inputPath = join(rootDir, '../../resources/input')
+      outputPath = join(rootDir, '../../resources/output')
+    } else {
+      // 生产环境：
+      // - config 从 extraResources 中读取（只读）
+      // - input/output 放在用户数据目录中（可写）
+      configPath = join(process.resourcesPath, 'resources/config')
+      inputPath = join(process.resourcesPath, 'resources/input')
+      outputPath = join(process.resourcesPath, 'resources/output')
+    }
+
+    // 确保目录存在
+    if (!fs.existsSync(inputPath)) fs.mkdirSync(inputPath, { recursive: true })
+    if (!fs.existsSync(outputPath)) fs.mkdirSync(outputPath, { recursive: true })
+
+    try {
+      // 调用 Addon
+      console.log('\nCalling ProcessBmpTranslation...')
+      console.log(`Config path: ${configPath}`)
+      console.log(`Input path: ${inputPath}`)
+      console.log(`Output path: ${outputPath}`)
+      const result = addon.processBmpTranslation(configPath, inputPath, outputPath)
+
+      console.log('\n--------------------------')
+      if (result === 0) {
+        console.log('✅ Success! Result code: 0')
+      } else {
+        console.log(`❌ Failed! Result code: ${result}`)
+        console.log('Check the console output for error details.')
+      }
+      return result
+    } catch (error) {
+      console.error('❌ Exception:', error)
+      return -1
+    }
+  })
 
   ipcMain.handle('addon:add', (_event, a: number, b: number) => addon.add(a, b))
 
