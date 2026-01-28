@@ -30,6 +30,7 @@ win:
   executableName: node-addon-api-demo
   icon: icons/icon.ico # 必须是 .ico
   artifactName: ${productName}-${os}-${version}-${arch}.${ext}
+  signAndEditExecutable: false
 nsis:
   oneClick: false
   allowElevation: true
