@@ -1,9 +1,11 @@
 #include "toml_handle.h"
 #define TOML_ENABLE_FORMATTERS 1
 #include "../toml.hpp"
+#include "../encoding_utils.h"
 #include <vector>
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <map>
 #include <filesystem>
@@ -36,12 +38,18 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
 
         // 1. 读取单体文件
         for (const auto& key : keys) {
+            #ifdef _WIN32
+            fs::path fpath = fs::path(Utf8ToWide(toml_input_dir)) / (key + ".toml");
+            #else
             fs::path fpath = fs::path(toml_input_dir) / (key + ".toml");
+            #endif
             if (!fs::exists(fpath)) continue;
             std::string fname = fpath.string();
+            std::cout << "[TOML Load] Processing: " << fname << std::endl;
             auto tbl = toml::parse_file(fname);
             commonWidth = (int)tbl["width"].as_integer()->get();
             commonHeight = (int)tbl["height"].as_integer()->get();
+            std::cout << "[TOML Load] Width=" << commonWidth << ", Height=" << commonHeight << std::endl;
 
             for (auto&& [k, node] : tbl) {
                 if (std::string(k.str()).find("pixels") != std::string::npos && node.is_array()) {
@@ -66,37 +74,79 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
         }
 
         // 2. 加载配置
+        #ifdef _WIN32
+        fs::path colorPath = fs::path(Utf8ToWide(config_dir)) / "color_to_number.toml";
+        #else
         fs::path colorPath = fs::path(config_dir) / "color_to_number.toml";
+        #endif
+        std::cout << "[Config] Looking for: " << colorPath.string() << " - Exists: " << (fs::exists(colorPath) ? "YES" : "NO") << std::endl;
         if (fs::exists(colorPath)) {
-            auto configTbl = toml::parse_file(colorPath.string());
-            for (const auto& key : keys) {
-                if (auto section = configTbl[key].as_table()) {
-                    for (auto&& [k, value] : *section) {
-                        colorMap[key][std::string(k.str())] = GetStringFromNode(&value);
+            try {
+                std::ifstream file(colorPath, std::ios::binary);
+                if (!file.is_open()) {
+                    std::cerr << "[Config] Failed to open file with ifstream" << std::endl;
+                    throw std::runtime_error("Cannot open file with ifstream");
+                }
+                std::stringstream buffer;
+                buffer << file.rdbuf();
+                file.close();
+                auto configTbl = toml::parse(buffer.str(), colorPath.string());
+                for (const auto& key : keys) {
+                    if (auto section = configTbl[key].as_table()) {
+                        for (auto&& [k, value] : *section) {
+                            colorMap[key][std::string(k.str())] = GetStringFromNode(&value);
+                        }
                     }
                 }
+                std::cout << "[Config] Successfully loaded color_to_number.toml" << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "[Config] Error loading color_to_number.toml: " << e.what() << std::endl;
+                throw;
             }
+        } else {
+            std::cerr << "[Config] Warning: color_to_number.toml not found" << std::endl;
         }
 
-        fs::path zbPath = fs::path(config_dir) / "zhenban_qianhou.toml";
+        fs::path zbPath = fs::path(Utf8ToWide(config_dir)) / "zhenban_qianhou.toml";
+        std::cout << "[Config] Looking for: " << zbPath.string() << " - Exists: " << (fs::exists(zbPath) ? "YES" : "NO") << std::endl;
         if (fs::exists(zbPath)) {
-            auto zbTbl = toml::parse_file(zbPath.string());
-            if (auto section = zbTbl["zhenban_qianhou"].as_table()) {
-                for (auto&& [k, value] : *section) {
-                    zhenbanMap[std::string(k.str())] = GetStringFromNode(&value);
+            try {
+                std::ifstream file(zbPath, std::ios::binary);
+                if (!file.is_open()) {
+                    std::cerr << "[Config] Failed to open zhenban_qianhou.toml with ifstream" << std::endl;
+                    throw std::runtime_error("Cannot open zhenban_qianhou.toml with ifstream");
                 }
-            }
-            if (auto signSection = zbTbl["line_sign"].as_table()) {
-                for (auto&& [k, value] : *signSection) {
-                    if (value.is_array()) {
-                        for (auto&& node : *value.as_array()) signCycles[std::string(k.str())].push_back(GetStringFromNode(&node));
+                std::stringstream buffer;
+                buffer << file.rdbuf();
+                file.close();
+                auto zbTbl = toml::parse(buffer.str(), zbPath.string());
+                if (auto section = zbTbl["zhenban_qianhou"].as_table()) {
+                    for (auto&& [k, value] : *section) {
+                        zhenbanMap[std::string(k.str())] = GetStringFromNode(&value);
                     }
                 }
+                if (auto signSection = zbTbl["line_sign"].as_table()) {
+                    for (auto&& [k, value] : *signSection) {
+                        if (value.is_array()) {
+                            for (auto&& node : *value.as_array()) signCycles[std::string(k.str())].push_back(GetStringFromNode(&node));
+                        }
+                    }
+                }
+                std::cout << "[Config] Successfully loaded zhenban_qianhou.toml" << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "[Config] Error loading zhenban_qianhou.toml: " << e.what() << std::endl;
+                throw;
             }
+        } else {
+            std::cerr << "[Config] Warning: zhenban_qianhou.toml not found" << std::endl;
         }
 
         // 3. 写入 combined.toml
+        #ifdef _WIN32
+        fs::path combinedPath = fs::path(Utf8ToWide(toml_input_dir)) / "combined.toml";
+        #else
         fs::path combinedPath = fs::path(toml_input_dir) / "combined.toml";
+        #endif
         std::ofstream out(combinedPath.string());
         out << "width = " << commonWidth << "\nheight = " << commonHeight << "\n";
         out << "shaxian_types = " << pixel_lists["shaxian"].size() << "\n\ndata = [\n";
@@ -120,6 +170,13 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
             out << "\n";
         }
         out << "]";
+        std::cout << "[CombineTomlFiles] Successfully wrote combined.toml" << std::endl;
         return 0;
-    } catch (...) { return -3; }
+    } catch (const std::exception& e) { 
+        std::cerr << "[CombineTomlFiles] Exception: " << e.what() << std::endl;
+        return -3;
+    } catch (...) { 
+        std::cerr << "[CombineTomlFiles] Unknown exception" << std::endl;
+        return -3;
+    }
 }

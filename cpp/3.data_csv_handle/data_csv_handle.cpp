@@ -8,10 +8,13 @@
  */
 #include "data_csv_handle.h"
 #include "../toml.hpp"
+#include "../encoding_utils.h"
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <map>
 #include <string>
+#include <iostream>
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -29,16 +32,43 @@ std::string GetValue(const toml::node* n) {
 
 YIMA_API int GenerateDataCsv(const char* toml_input_dir, const char* csv_output_dir) {
     try {
-        fs::path csvDir = fs::path(csv_output_dir);
-        if (!fs::exists(csvDir)) fs::create_directories(csvDir);
+        std::cout << "[Step 3] Starting GenerateDataCsv" << std::endl;
+        // Create fs::paths from UTF-8 strings with proper encoding handling
+        fs::path csvDir = CreatePathFromUtf8(csv_output_dir);
+        fs::path toml_input = CreatePathFromUtf8(toml_input_dir);
         
-        fs::path combinedPath = fs::path(toml_input_dir) / "combined.toml";
-        if (!fs::exists(combinedPath)) return -1;
+        std::cout << "[Step 3] CSV output directory: " << csvDir.string() << std::endl;
+        std::cout << "[Step 3] TOML input directory: " << toml_input.string() << std::endl;
+        
+        if (!fs::exists(csvDir)) {
+            std::cout << "[Step 3] Creating CSV directory" << std::endl;
+            fs::create_directories(csvDir);
+        }
+        
+        fs::path combinedPath = toml_input / "combined.toml";
+        std::cout << "[Step 3] Looking for combined.toml: " << combinedPath.string() << " - Exists: " << (fs::exists(combinedPath) ? "YES" : "NO") << std::endl;
+        if (!fs::exists(combinedPath)) {
+            std::cerr << "[Step 3] Error: combined.toml not found" << std::endl;
+            return -1;
+        }
 
-        auto config = toml::parse_file(combinedPath.string());
+        std::cout << "[Step 3] Parsing combined.toml" << std::endl;
+        std::ifstream file(combinedPath, std::ios::binary);
+        if (!file.is_open()) {
+            std::cerr << "[Step 3] Error: Cannot open combined.toml with ifstream" << std::endl;
+            return -1;
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        file.close();
+        auto config = toml::parse(buffer.str(), combinedPath.string());
+        
         int width = (int)config["width"].as_integer()->get();
         int height = (int)config["height"].as_integer()->get();
+        std::cout << "[Step 3] Parsed dimensions: width=" << width << ", height=" << height << std::endl;
+        
         auto data_arr = config["data"].as_array();
+        std::cout << "[Step 3] Data array size: " << data_arr->size() << std::endl;
 
         std::map<int, std::map<int, FullPixelData>> grid;
         for (auto&& row_node : *data_arr) {
@@ -48,8 +78,15 @@ YIMA_API int GenerateDataCsv(const char* toml_input_dir, const char* csv_output_
             grid[y][x] = { GetValue(row->get(2)), GetValue(row->get(3)), GetValue(row->get(4)), 
                            GetValue(row->get(5)), GetValue(row->get(6)), GetValue(row->get(7)) };
         }
+        std::cout << "[Step 3] Grid populated successfully" << std::endl;
 
-        std::ofstream csv(fs::path(csv_output_dir) / "pixel_data.csv");
+        fs::path csvPath = csvDir / "pixel_data.csv";
+        std::cout << "[Step 3] Writing CSV to: " << csvPath.string() << std::endl;
+        std::ofstream csv(csvPath);
+        if (!csv.is_open()) {
+            std::cerr << "[Step 3] Error: Cannot open CSV file for writing" << std::endl;
+            return -1;
+        }
         const unsigned char BOM[] = {0xEF, 0xBB, 0xBF};
         csv.write((const char*)BOM, sizeof(BOM));
         csv << "INDEX,X,Y,SEMA,SHAXIAN,LUOLA,DUMU,ZHENBAN,SIGN,PRE_ACTION,POST_ACTION,CMD\n";
@@ -77,6 +114,14 @@ YIMA_API int GenerateDataCsv(const char* toml_input_dir, const char* csv_output_
                 csv << ",,,," << last_sign + grid[y][x_order.back()].shaxian + next_sx << "," << grid[y][x_order.back()].luola << ",,," << last_sign << ",,,line_switch\n";
             }
         }
+        csv.close();
+        std::cout << "[Step 3] Successfully generated pixel_data.csv" << std::endl;
         return 0;
-    } catch (...) { return -1; }
+    } catch (const std::exception& e) {
+        std::cerr << "[Step 3] Exception: " << e.what() << std::endl;
+        return -3;
+    } catch (...) {
+        std::cerr << "[Step 3] Unknown exception" << std::endl;
+        return -3;
+    }
 }

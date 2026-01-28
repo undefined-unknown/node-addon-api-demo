@@ -70,10 +70,11 @@ app.whenReady().then(() => {
 
     if (is.dev) {
       // 开发环境：使用项目根目录下的 resources
-      const rootDir = __dirname
-      configPath = join(rootDir, '../../resources/config')
-      inputPath = join(rootDir, '../../resources/input')
-      outputPath = join(rootDir, '../../resources/output')
+      // 使用 app.getAppPath() 获取应用根目录，确保中文路径正确处理
+      const appPath = app.getAppPath()
+      configPath = join(appPath, 'resources/config')
+      inputPath = join(appPath, 'resources/input')
+      outputPath = join(appPath, 'resources/output')
     } else {
       // 生产环境：
       // - config 从 extraResources 中读取（只读）

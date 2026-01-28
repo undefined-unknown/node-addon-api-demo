@@ -1,5 +1,6 @@
 #include "txt_generator.h"
 #include "../toml.hpp"
+#include "../encoding_utils.h"
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -61,13 +62,24 @@ std::string TrimCmd(const std::string& s) {
 
 YIMA_API int GenerateRawTxt(const char* csv_input_dir, const char* txt_output_dir, const char* config_dir) {
     try {
+        #ifdef _WIN32
+        fs::path txtDir = fs::path(Utf8ToWide(txt_output_dir));
+        fs::path csvInputDir = fs::path(Utf8ToWide(csv_input_dir));
+        #else
         fs::path txtDir = fs::path(txt_output_dir);
+        fs::path csvInputDir = fs::path(csv_input_dir);
+        #endif
+        
         if (!fs::exists(txtDir)) fs::create_directories(txtDir);
         
         // --- 1. 加载 head_tail_cmd.toml 配置 ---
         std::string head_cmd = "";
         std::string tail_cmd = "";
+        #ifdef _WIN32
+        fs::path configPath = fs::path(Utf8ToWide(config_dir)) / "head_tail_cmd.toml";
+        #else
         fs::path configPath = fs::path(config_dir) / "head_tail_cmd.toml";
+        #endif
         
         if (fs::exists(configPath)) {
             try {
@@ -79,7 +91,7 @@ YIMA_API int GenerateRawTxt(const char* csv_input_dir, const char* txt_output_di
             } catch (...) {}
         }
 
-        fs::path csvPath = fs::path(csv_input_dir) / "pixel_cmd.csv";
+        fs::path csvPath = csvInputDir / "pixel_cmd.csv";
         if (!fs::exists(csvPath)) return -1;
 
         auto data = ParsePixelCmdCsv(csvPath.string());
