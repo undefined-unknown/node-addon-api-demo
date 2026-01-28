@@ -46,7 +46,15 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
             if (!fs::exists(fpath)) continue;
             std::string fname = fpath.string();
             std::cout << "[TOML Load] Processing: " << fname << std::endl;
-            auto tbl = toml::parse_file(fname);
+            std::ifstream file(fpath, std::ios::binary);
+            if (!file.is_open()) {
+                std::cerr << "[TOML Load] Error: Cannot open file with ifstream: " << fname << std::endl;
+                continue;
+            }
+            std::stringstream buffer;
+            buffer << file.rdbuf();
+            file.close();
+            auto tbl = toml::parse(buffer.str(), fname);
             commonWidth = (int)tbl["width"].as_integer()->get();
             commonHeight = (int)tbl["height"].as_integer()->get();
             std::cout << "[TOML Load] Width=" << commonWidth << ", Height=" << commonHeight << std::endl;
