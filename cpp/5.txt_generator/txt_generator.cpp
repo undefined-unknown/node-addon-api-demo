@@ -3,6 +3,7 @@
 #include "../encoding_utils.h"
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <string>
 #include <filesystem>
@@ -83,12 +84,22 @@ YIMA_API int GenerateRawTxt(const char* csv_input_dir, const char* txt_output_di
         
         if (fs::exists(configPath)) {
             try {
-                auto tbl = toml::parse_file(configPath.string());
-                if (auto section = tbl["head_tail_cmd"].as_table()) {
-                    if (auto h = section->get("head")) head_cmd = TrimCmd(h->as_string()->get());
-                    if (auto t = section->get("tail")) tail_cmd = TrimCmd(t->as_string()->get());
+                std::ifstream file(configPath, std::ios::binary);
+                if (!file.is_open()) {
+                    std::cerr << "[Step 5] Error: Cannot open head_tail_cmd.toml with ifstream" << std::endl;
+                } else {
+                    std::stringstream buffer;
+                    buffer << file.rdbuf();
+                    file.close();
+                    auto tbl = toml::parse(buffer.str(), configPath.string());
+                    if (auto section = tbl["head_tail_cmd"].as_table()) {
+                        if (auto h = section->get("head")) head_cmd = TrimCmd(h->as_string()->get());
+                        if (auto t = section->get("tail")) tail_cmd = TrimCmd(t->as_string()->get());
+                    }
                 }
-            } catch (...) {}
+            } catch (const std::exception& e) {
+                std::cerr << "[Step 5] Exception loading head_tail_cmd.toml: " << e.what() << std::endl;
+            }
         }
 
         fs::path csvPath = csvInputDir / "pixel_cmd.csv";
