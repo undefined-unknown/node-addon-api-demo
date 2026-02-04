@@ -19,15 +19,16 @@
     "build:win": "npm run rebuild && npm run build && electron-builder --win",
     "build:mac": "npm run rebuild && electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
-    "install": "node-gyp rebuild",
-    "rebuild": "electron-rebuild -f -w my_addon"
+    "demo": "npm run dev",
+    "install": "echo 'No root binding.gyp to build'",
+    "rebuild": "electron-rebuild -f -w yima_addon"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "bindings": "^1.5.0",
     "electron-updater": "^6.3.9",
-    "node-addon-api": "^8.5.0"
+    "yima_addon": "file:./yima_addon"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

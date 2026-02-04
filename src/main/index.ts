@@ -3,9 +3,9 @@ import { join } from 'path'
 import fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import bindings from 'bindings'
 
-const addon = bindings('yima_addon')
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const addon = require('yima_addon')
 
 function createWindow(): void {
   // Create the browser window.

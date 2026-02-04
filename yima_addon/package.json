@@ -1,0 +1,13 @@
+{
+  "name": "yima_addon",
+  "version": "1.0.0",
+  "description": "Yima Addon",
+  "main": "build/Release/yima_addon.node",
+  "scripts": {
+    "install": "node-gyp rebuild"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.5.0"
+  },
+  "gypfile": true
+}
