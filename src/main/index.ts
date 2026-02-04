@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { join } from 'path'
 import fs from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import icon from '../../resources/icon.png?asset'
+import icon from '../../yima_addon/resources/icon.png?asset'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const addon = require('yima_addon')
@@ -72,9 +72,9 @@ app.whenReady().then(() => {
       // 开发环境：使用项目根目录下的 resources
       // 使用 app.getAppPath() 获取应用根目录，确保中文路径正确处理
       const appPath = app.getAppPath()
-      configPath = join(appPath, 'resources/config')
-      inputPath = join(appPath, 'resources/input')
-      outputPath = join(appPath, 'resources/output')
+      configPath = join(appPath, 'yima_addon/resources/config')
+      inputPath = join(appPath, 'yima_addon/resources/input')
+      outputPath = join(appPath, 'yima_addon/resources/output')
     } else {
       // 生产环境：
       // - config 从 extraResources 中读取（只读）
