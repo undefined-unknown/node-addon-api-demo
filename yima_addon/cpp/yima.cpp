@@ -95,7 +95,7 @@ int ProcessBmpTranslation(const std::string& config_path, const std::string& inp
 
         // Step 2: Combine TOML
         std::cout << "[Step 2] Combining TOML files..." << std::endl;
-        if (CombineTomlFiles(toml_dir_str.c_str(), output_dir_str.c_str(), config_path_str.c_str()) != 0) return -2;
+        if (CombineTomlFiles(toml_dir_str.c_str(), config_path_str.c_str()) != 0) return -2;
 
         // Step 3: Generate Data CSV
         std::cout << "[Step 3] Generating Data CSV..." << std::endl;

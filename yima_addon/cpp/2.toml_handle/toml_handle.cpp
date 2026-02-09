@@ -17,6 +17,7 @@ struct PixelGroup {
     std::string shaxian = "#000000";
     std::string luola = "#000000";
     std::string dumu = "#000000";
+    std::string direction = "#000000";
 };
 
 std::string GetStringFromNode(const toml::node* node) {
@@ -26,12 +27,11 @@ std::string GetStringFromNode(const toml::node* node) {
     return "";
 }
 
-YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output_dir, const char* config_dir) {
+YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* config_dir) {
     try {
-        std::vector<std::string> keys = { "sema", "shaxian", "luola", "dumu" };
+        std::vector<std::string> keys = { "sema", "shaxian", "luola", "dumu", "direction" };
         std::map<std::string, std::map<std::string, std::string>> colorMap;
-        std::map<std::string, std::string> zhenbanMap;
-        std::map<std::string, std::vector<std::string>> signCycles;
+
         std::map<std::string, std::vector<std::string>> pixel_lists;
         std::map<int, std::map<int, PixelGroup>> dataGrid;
         int commonWidth = -1, commonHeight = -1;
@@ -77,6 +77,7 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
                     else if (key == "shaxian") dataGrid[y][x].shaxian = color;
                     else if (key == "luola") dataGrid[y][x].luola = color;
                     else if (key == "dumu") dataGrid[y][x].dumu = color;
+                    else if (key == "direction") dataGrid[y][x].direction = color;
                 }
             }
         }
@@ -115,39 +116,7 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
             std::cerr << "[Config] Warning: color_to_number.toml not found" << std::endl;
         }
 
-        fs::path zbPath = fs::path(Utf8ToWide(config_dir)) / "zhenban_qianhou.toml";
-        std::cout << "[Config] Looking for: " << zbPath.string() << " - Exists: " << (fs::exists(zbPath) ? "YES" : "NO") << std::endl;
-        if (fs::exists(zbPath)) {
-            try {
-                std::ifstream file(zbPath, std::ios::binary);
-                if (!file.is_open()) {
-                    std::cerr << "[Config] Failed to open zhenban_qianhou.toml with ifstream" << std::endl;
-                    throw std::runtime_error("Cannot open zhenban_qianhou.toml with ifstream");
-                }
-                std::stringstream buffer;
-                buffer << file.rdbuf();
-                file.close();
-                auto zbTbl = toml::parse(buffer.str(), zbPath.string());
-                if (auto section = zbTbl["zhenban_qianhou"].as_table()) {
-                    for (auto&& [k, value] : *section) {
-                        zhenbanMap[std::string(k.str())] = GetStringFromNode(&value);
-                    }
-                }
-                if (auto signSection = zbTbl["line_sign"].as_table()) {
-                    for (auto&& [k, value] : *signSection) {
-                        if (value.is_array()) {
-                            for (auto&& node : *value.as_array()) signCycles[std::string(k.str())].push_back(GetStringFromNode(&node));
-                        }
-                    }
-                }
-                std::cout << "[Config] Successfully loaded zhenban_qianhou.toml" << std::endl;
-            } catch (const std::exception& e) {
-                std::cerr << "[Config] Error loading zhenban_qianhou.toml: " << e.what() << std::endl;
-                throw;
-            }
-        } else {
-            std::cerr << "[Config] Warning: zhenban_qianhou.toml not found" << std::endl;
-        }
+
 
         // 3. 写入 combined.toml
         #ifdef _WIN32
@@ -160,19 +129,16 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
         out << "shaxian_types = " << pixel_lists["shaxian"].size() << "\n\ndata = [\n";
         
         auto getT = [&](const std::string& key, const std::string& color) {
-            return (colorMap.count(key) && colorMap[key].count(color)) ? colorMap[key][color] : color;
+            return (colorMap.count(key) && colorMap[key].count(color)) ? colorMap[key][color] : "0";
         };
 
-        std::string signKey = std::to_string(pixel_lists["shaxian"].size());
         for (int y = 1; y <= commonHeight; ++y) {
             out << "  ";
-            std::string currentSign = (signCycles.count(signKey)) ? signCycles[signKey][(y - 1) % signCycles[signKey].size()] : "+";
             for (int x = 1; x <= commonWidth; ++x) {
                 const auto& c = dataGrid[y][x];
-                std::string s_id = getT("sema", c.sema);
-                out << "[" << x << "," << y << ",\"" << s_id << "\",\"" << getT("shaxian", c.shaxian) << "\",\"" 
-                    << getT("luola", c.luola) << "\",\"" << getT("dumu", c.dumu) << "\"," 
-                    << ((zhenbanMap.count(s_id)) ? zhenbanMap[s_id] : "0") << ",\"" << currentSign << "\"]";
+                out << "[" << x << "," << y << ",\"" << getT("sema", c.sema) << "\",\"" << getT("shaxian", c.shaxian) << "\",\"" 
+                    << getT("luola", c.luola) << "\",\"" << getT("dumu", c.dumu) << "\",\"" 
+                    << getT("direction", c.direction) << "\"]";
                 if (!(y == commonHeight && x == commonWidth)) out << ", ";
             }
             out << "\n";
