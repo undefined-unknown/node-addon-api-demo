@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include <map>
+#include <set>
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -62,7 +63,11 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
             for (auto&& [k, node] : tbl) {
                 if (std::string(k.str()).find("pixels") != std::string::npos && node.is_array()) {
                     auto p_arr = node.as_array();
-                    for (auto&& p_node : *p_arr) pixel_lists[key].push_back(GetStringFromNode(&p_node));
+                    for (auto&& p_node : *p_arr) {
+                        std::string color = GetStringFromNode(&p_node);
+                        if (key == "shaxian" && color == "#000000") color = "#800000";
+                        pixel_lists[key].push_back(color);
+                    }
                 }
             }
 
@@ -157,13 +162,19 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
         #endif
         std::ofstream out(combinedPath.string());
         out << "width = " << commonWidth << "\nheight = " << commonHeight << "\n";
-        out << "shaxian_types = " << pixel_lists["shaxian"].size() << "\n\ndata = [\n";
+        
+        size_t shaxianTypes = 0;
+        if (pixel_lists.count("shaxian")) {
+            std::set<std::string> uniqueShaxian(pixel_lists["shaxian"].begin(), pixel_lists["shaxian"].end());
+            shaxianTypes = uniqueShaxian.size();
+        }
+        out << "shaxian_types = " << shaxianTypes << "\n\ndata = [\n";
         
         auto getT = [&](const std::string& key, const std::string& color) {
             return (colorMap.count(key) && colorMap[key].count(color)) ? colorMap[key][color] : color;
         };
 
-        std::string signKey = std::to_string(pixel_lists["shaxian"].size());
+        std::string signKey = std::to_string(shaxianTypes);
         for (int y = 1; y <= commonHeight; ++y) {
             out << "  ";
             std::string currentSign = (signCycles.count(signKey)) ? signCycles[signKey][(y - 1) % signCycles[signKey].size()] : "+";
