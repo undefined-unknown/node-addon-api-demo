@@ -39,11 +39,7 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
 
         // 1. 读取单体文件
         for (const auto& key : keys) {
-            #ifdef _WIN32
-            fs::path fpath = fs::path(Utf8ToWide(toml_input_dir)) / (key + ".toml");
-            #else
-            fs::path fpath = fs::path(toml_input_dir) / (key + ".toml");
-            #endif
+            fs::path fpath = CreatePathFromUtf8(toml_input_dir) / (key + ".toml");
             if (!fs::exists(fpath)) continue;
             std::string fname = fpath.string();
             std::cout << "[TOML Load] Processing: " << fname << std::endl;
@@ -87,11 +83,7 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
         }
 
         // 2. 加载配置
-        #ifdef _WIN32
-        fs::path colorPath = fs::path(Utf8ToWide(config_dir)) / "color_to_number.toml";
-        #else
-        fs::path colorPath = fs::path(config_dir) / "color_to_number.toml";
-        #endif
+        fs::path colorPath = CreatePathFromUtf8(config_dir) / "color_to_number.toml";
         std::cout << "[Config] Looking for: " << colorPath.string() << " - Exists: " << (fs::exists(colorPath) ? "YES" : "NO") << std::endl;
         if (fs::exists(colorPath)) {
             try {
@@ -120,7 +112,7 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
             std::cerr << "[Config] Warning: color_to_number.toml not found" << std::endl;
         }
 
-        fs::path zbPath = fs::path(Utf8ToWide(config_dir)) / "zhenban_qianhou.toml";
+        fs::path zbPath = CreatePathFromUtf8(config_dir) / "zhenban_qianhou.toml";
         std::cout << "[Config] Looking for: " << zbPath.string() << " - Exists: " << (fs::exists(zbPath) ? "YES" : "NO") << std::endl;
         if (fs::exists(zbPath)) {
             try {
@@ -155,11 +147,7 @@ YIMA_API int CombineTomlFiles(const char* toml_input_dir, const char* csv_output
         }
 
         // 3. 写入 combined.toml
-        #ifdef _WIN32
-        fs::path combinedPath = fs::path(Utf8ToWide(toml_input_dir)) / "combined.toml";
-        #else
-        fs::path combinedPath = fs::path(toml_input_dir) / "combined.toml";
-        #endif
+        fs::path combinedPath = CreatePathFromUtf8(toml_input_dir) / "combined.toml";
         std::ofstream out(combinedPath.string());
         out << "width = " << commonWidth << "\nheight = " << commonHeight << "\n";
         
